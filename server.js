@@ -15,7 +15,7 @@ const io = new Server(server, {
 const userSockets = {}; // { user_id: { socketId: socket.id, expoTokenPush: 'token', username: 'username' } }
 
 // Temporary in-memory storage for swipes (and Expo push tokens)
-const swipes = {}; // { item_id: { user_id: { interested: true, partner_id: ..., expoTokenPush: 'token' } } }
+const swipes = {}; // { item_id: { user_id: { interested: true, partner_id: ..., expoPushToken: 'token' } } }
 
 // Function to send push notifications via Expo Push API
 const sendPushNotification = async (expoTokenPush, message) => {
@@ -48,7 +48,7 @@ const sendPushNotification = async (expoTokenPush, message) => {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Listen for user login event to map user_id to socket.id and store expoTokenPush and username
+  // Listen for user login event to map user_id to socket.id and store expoPushToken and username
   socket.on('registerUser', ({ user_id, expoPushToken, username }) => {
     userSockets[user_id] = { socketId: socket.id, expoPushToken, username }; // Map user_id to socket ID, store expoPushToken and username
     console.log(`User registered: ${user_id} with socket ID: ${socket.id}, Expo Push Token: ${expoPushToken}, and username: ${username}`);
@@ -56,9 +56,9 @@ io.on('connection', (socket) => {
 
   // Listen for couple swipes
   socket.on('coupleSwipe', (swipeData) => {
-    const { user_id, partner_id, interested, id: item_id, expoPushToken, partner_username, user_username, item_type, title, image } = swipeData;
+    const { user_id, partner_id, interested, id: item_id, expoPushToken, partner_username, user_username, item_type } = swipeData;
 
-    console.log('Received coupleSwipe:', { user_id, partner_id, interested, item_id, expoPushToken, partner_username, item_type, title, image });
+    console.log('Received coupleSwipe:', { user_id, partner_id, interested, item_id, expoPushToken, partner_username, item_type });
 
     if (!user_id || !partner_id || !item_id) {
       console.error('Invalid swipe data:', swipeData);
@@ -76,18 +76,44 @@ io.on('connection', (socket) => {
     if (partnerSwipe && partnerSwipe.interested && interested) {
       console.log(`Match detected: User ${user_id} matched with ${partner_id} on item ${item_id}`);
 
-      // Get the current user's and partner's usernames from the swipeData
-      const currentUserName = user_username || 'Unknown User';
-      const partnerUserName = partner_username || 'Unknown Partner';
+      // Get the title and image based on item_type
+      // Get the title and image based on item_type
+      let title = '';
+      let image = '';
+
+      switch (item_type) {
+        case 'movie':
+          title = swipeData.movie_details?.title || 'Unknown Movie';
+          image = swipeData.movie_details?.image || '';
+          break;
+        case 'show':
+          title = swipeData.show_details?.title || 'Unknown Show';
+          image = swipeData.show_details?.image || '';
+          break;
+        case 'place':
+          title = swipeData.place_details?.city_name || 'Unknown Place';
+          image = swipeData.place_details?.city_image_url || '';
+          break;
+        case 'restaurant':
+          title = swipeData.restaurant_details?.name || 'Unknown Restaurant';
+          image = swipeData.restaurant_details?.image || '';
+          break;
+        case 'recipe':
+          title = swipeData.recipe_details?.title || 'Unknown Recipe';
+          image = swipeData.recipe_details?.image || '';
+          break;
+        default:
+          console.error('Unknown item type:', item_type);
+      }
 
       // Send notifications to both users
       if (expoPushToken) {
-        console.log(`Sending notification to user ${user_id} with partner name ${partnerUserName}`);
-        sendPushNotification(expoPushToken, `You matched with ${partnerUserName}`);
+        console.log(`Sending notification to user ${user_id} with partner name ${partner_username}`);
+        sendPushNotification(expoPushToken, `You matched with ${partner_username}`);
       }
       if (partnerSwipe.expoPushToken) {
-        console.log(`Sending notification to partner ${partner_id} with user name ${currentUserName}`);
-        sendPushNotification(partnerSwipe.expoPushToken, `You matched with ${currentUserName}`);
+        console.log(`Sending notification to partner ${partner_id} with user name ${user_username}`);
+        sendPushNotification(partnerSwipe.expoPushToken, `You matched with ${user_username}`);
       }
 
       // Emit match event to both users via their socket IDs with complete match data
@@ -95,32 +121,32 @@ io.on('connection', (socket) => {
       const partnerSocket = userSockets[partner_id];
 
       if (userSocket) {
-        console.log(`Sending match event to user ${user_id} with partner_name ${partnerUserName}`);
+        console.log(`Sending match event to user ${user_id} with partner_name ${partner_username}`);
         io.to(userSocket.socketId).emit('match', {
           user_id,
-          user_username: currentUserName,  // Current user's username
+          user_username,  // Current user's username
           partner_id,
-          partner_username: partnerUserName,  // Partner's username
+          partner_username,  // Partner's username
           item_id,
           item_type,  // Include item type
-          title,  // Include item title
-          image,  // Include item image
-          message: `You matched with ${partnerUserName}`,
+          title,  // Include resolved title
+          image,  // Include resolved image
+          message: `You matched with ${partner_username}`,
         });
       }
 
       if (partnerSocket) {
-        console.log(`Sending match event to partner ${partner_id} with user_name ${currentUserName}`);
+        console.log(`Sending match event to partner ${partner_id} with user_name ${user_username}`);
         io.to(partnerSocket.socketId).emit('match', {
           user_id: partner_id,
-          user_username: partnerUserName,  // Swap usernames for the partner
+          user_username: partner_username,  // Swap usernames for the partner
           partner_id: user_id,
-          partner_username: currentUserName,  // Current user's username for the partner
+          partner_username: user_username,  // Current user's username for the partner
           item_id,
           item_type,  // Include item type
-          title,  // Include item title
-          image,  // Include item image
-          message: `You matched with ${currentUserName}`,
+          title,  // Include resolved title
+          image,  // Include resolved image
+          message: `You matched with ${user_username}`,
         });
       }
 
