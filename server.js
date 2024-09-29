@@ -82,25 +82,25 @@ io.on('connection', (socket) => {
       let image = '';
 
       switch (item_type) {
-        case 'movie':
-          title = swipeData.movie_details?.title || 'Unknown Movie';
-          image = swipeData.movie_details?.image || '';
+        case 'movies':
+          title = swipeData?.title || 'Unknown Movie';
+          image = swipeData?.image || '';
           break;
-        case 'show':
-          title = swipeData.show_details?.title || 'Unknown Show';
-          image = swipeData.show_details?.image || '';
+        case 'shows':
+          title = swipeData?.title || 'Unknown Show';
+          image = swipeData?.image || '';
           break;
-        case 'place':
-          title = swipeData.place_details?.city_name || 'Unknown Place';
-          image = swipeData.place_details?.city_image_url || '';
+        case 'places':
+          title = swipeData?.city_name || 'Unknown Place';
+          image = swipeData?.city_image_url || '';
           break;
-        case 'restaurant':
-          title = swipeData.restaurant_details?.name || 'Unknown Restaurant';
-          image = swipeData.restaurant_details?.image || '';
+        case 'restaurants':
+          title = swipeData?.name || 'Unknown Restaurant';
+          image = swipeData?.image || '';
           break;
-        case 'recipe':
-          title = swipeData.recipe_details?.title || 'Unknown Recipe';
-          image = swipeData.recipe_details?.image || '';
+        case 'recipes':
+          title = swipeData?.title || 'Unknown Recipe';
+          image = swipeData?.image || '';
           break;
         default:
           console.error('Unknown item type:', item_type);
