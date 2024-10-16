@@ -91,11 +91,11 @@ io.on('connection', (socket) => {
           image = swipeData?.image || '';
           break;
         case 'places':
-          title = swipeData?.city_name || 'Unknown Place';
-          image = swipeData?.city_image_url || '';
+          title = swipeData?.title || 'Unknown Place';
+          image = swipeData?.image || '';
           break;
         case 'restaurants':
-          title = swipeData?.name || 'Unknown Restaurant';
+          title = swipeData?.title || 'Unknown Restaurant';
           image = swipeData?.image || '';
           break;
         case 'recipes':
